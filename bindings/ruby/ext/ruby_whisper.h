@@ -4,12 +4,12 @@
 #include "whisper.h"
 
 typedef struct {
-  struct whisper_context *context;
+    struct whisper_context *context;
 } ruby_whisper;
 
 typedef struct {
-  struct whisper_full_params params;
-  bool diarize;
+    struct whisper_full_params params;
+    bool diarize;
 } ruby_whisper_params;
 
 #endif

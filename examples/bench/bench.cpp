@@ -7,26 +7,30 @@
 
 // command-line parameters
 struct whisper_params {
-    int32_t n_threads = std::min(4, (int32_t) std::thread::hardware_concurrency());
-    int32_t what = 0; // what to benchmark: 0 - whisper ecoder, 1 - memcpy, 2 - ggml_mul_mat
+    int32_t n_threads =
+        std::min(4, (int32_t)std::thread::hardware_concurrency());
+    int32_t what = 0; // what to benchmark: 0 - whisper ecoder, 1 - memcpy, 2 -
+                      // ggml_mul_mat
 
     std::string model = "models/ggml-base.en.bin";
 };
 
-void whisper_print_usage(int argc, char ** argv, const whisper_params & params);
+void whisper_print_usage(int argc, char **argv, const whisper_params &params);
 
-bool whisper_params_parse(int argc, char ** argv, whisper_params & params) {
+bool whisper_params_parse(int argc, char **argv, whisper_params &params) {
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
 
         if (arg == "-h" || arg == "--help") {
             whisper_print_usage(argc, argv, params);
             exit(0);
-        }
-        else if (arg == "-t" || arg == "--threads") { params.n_threads = std::stoi(argv[++i]); }
-        else if (arg == "-m" || arg == "--model")   { params.model     = argv[++i]; }
-        else if (arg == "-w" || arg == "--what")    { params.what     = atoi(argv[++i]); }
-        else {
+        } else if (arg == "-t" || arg == "--threads") {
+            params.n_threads = std::stoi(argv[++i]);
+        } else if (arg == "-m" || arg == "--model") {
+            params.model = argv[++i];
+        } else if (arg == "-w" || arg == "--what") {
+            params.what = atoi(argv[++i]);
+        } else {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
             whisper_print_usage(argc, argv, params);
             exit(0);
@@ -36,29 +40,38 @@ bool whisper_params_parse(int argc, char ** argv, whisper_params & params) {
     return true;
 }
 
-void whisper_print_usage(int /*argc*/, char ** argv, const whisper_params & params) {
+void whisper_print_usage(int /*argc*/, char **argv,
+                         const whisper_params &params) {
     fprintf(stderr, "\n");
     fprintf(stderr, "usage: %s [options]\n", argv[0]);
     fprintf(stderr, "\n");
     fprintf(stderr, "options:\n");
-    fprintf(stderr, "  -h,       --help        [default] show this help message and exit\n");
-    fprintf(stderr, "  -t N,     --threads N   [%-7d] number of threads to use during computation\n", params.n_threads);
-    fprintf(stderr, "  -m FNAME, --model FNAME [%-7s] model path\n",                                  params.model.c_str());
-    fprintf(stderr, "  -w N,     --what N      [%-7d] what to benchmark:\n",                          params.what);
-    fprintf(stderr, "                           %-7s  0 - whisper\n",                                 "");
-    fprintf(stderr, "                           %-7s  1 - memcpy\n",                                  "");
-    fprintf(stderr, "                           %-7s  2 - ggml_mul_mat\n",                            "");
+    fprintf(stderr, "  -h,       --help        [default] show this help "
+                    "message and exit\n");
+    fprintf(stderr,
+            "  -t N,     --threads N   [%-7d] number of threads to use during "
+            "computation\n",
+            params.n_threads);
+    fprintf(stderr, "  -m FNAME, --model FNAME [%-7s] model path\n",
+            params.model.c_str());
+    fprintf(stderr, "  -w N,     --what N      [%-7d] what to benchmark:\n",
+            params.what);
+    fprintf(stderr, "                           %-7s  0 - whisper\n", "");
+    fprintf(stderr, "                           %-7s  1 - memcpy\n", "");
+    fprintf(stderr, "                           %-7s  2 - ggml_mul_mat\n", "");
     fprintf(stderr, "\n");
 }
 
-int whisper_bench_full(const whisper_params & params) {
+int whisper_bench_full(const whisper_params &params) {
     // whisper init
 
-    struct whisper_context * ctx = whisper_init_from_file(params.model.c_str());
+    struct whisper_context *ctx = whisper_init_from_file(params.model.c_str());
 
     {
         fprintf(stderr, "\n");
-        fprintf(stderr, "system_info: n_threads = %d / %d | %s\n", params.n_threads, std::thread::hardware_concurrency(), whisper_print_system_info());
+        fprintf(stderr, "system_info: n_threads = %d / %d | %s\n",
+                params.n_threads, std::thread::hardware_concurrency(),
+                whisper_print_system_info());
     }
 
     if (ctx == nullptr) {
@@ -100,14 +113,16 @@ int whisper_bench_full(const whisper_params & params) {
     }
 
     for (int i = 0; i < 16; i++) {
-        if (int ret = whisper_decode(ctx, tokens, 256, 0, params.n_threads) != 0) {
+        if (int ret =
+                whisper_decode(ctx, tokens, 256, 0, params.n_threads) != 0) {
             fprintf(stderr, "error: failed to encode model: %d\n", ret);
             return 4;
         }
     }
 
     for (int i = 0; i < 256; i++) {
-        if (int ret = whisper_decode(ctx, tokens, 1, i, params.n_threads) != 0) {
+        if (int ret =
+                whisper_decode(ctx, tokens, 1, i, params.n_threads) != 0) {
             fprintf(stderr, "error: failed to encode model: %d\n", ret);
             return 4;
         }
@@ -131,7 +146,7 @@ int whisper_bench_full(const whisper_params & params) {
     return 0;
 }
 
-int main(int argc, char ** argv) {
+int main(int argc, char **argv) {
     whisper_params params;
 
     if (whisper_params_parse(argc, argv, params) == false) {
@@ -141,10 +156,18 @@ int main(int argc, char ** argv) {
     int ret = -1;
 
     switch (params.what) {
-        case 0: ret = whisper_bench_full(params);                break;
-        case 1: ret = whisper_bench_memcpy(params.n_threads);       break;
-        case 2: ret = whisper_bench_ggml_mul_mat(params.n_threads); break;
-        default: fprintf(stderr, "error: unknown benchmark: %d\n", params.what); break;
+    case 0:
+        ret = whisper_bench_full(params);
+        break;
+    case 1:
+        ret = whisper_bench_memcpy(params.n_threads);
+        break;
+    case 2:
+        ret = whisper_bench_ggml_mul_mat(params.n_threads);
+        break;
+    default:
+        fprintf(stderr, "error: unknown benchmark: %d\n", params.what);
+        break;
     }
 
     return ret;

@@ -1,7 +1,9 @@
 import argparse
 import importlib.util
 
-spec = importlib.util.spec_from_file_location('whisper_to_coreml', 'models/convert-whisper-to-coreml.py')
+spec = importlib.util.spec_from_file_location(
+    "whisper_to_coreml", "models/convert-whisper-to-coreml.py"
+)
 whisper_to_coreml = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(whisper_to_coreml)
 
@@ -37,6 +39,7 @@ WHISPER_MAPPING = {
     "layer_norm": "ln_post",
 }
 
+
 # https://github.com/bayartsogt-ya/whisper-multiple-hf-datasets/blob/main/src/multiple_datasets/hub_default_utils.py
 def rename_keys(s_dict):
     keys = list(s_dict.keys())
@@ -51,23 +54,26 @@ def rename_keys(s_dict):
         s_dict[new_key] = s_dict.pop(key)
     return s_dict
 
+
 # https://github.com/bayartsogt-ya/whisper-multiple-hf-datasets/blob/main/src/multiple_datasets/hub_default_utils.py
 def convert_hf_whisper(hf_model_name_or_path: str, whisper_state_path: str):
-    transformer_model = WhisperForConditionalGeneration.from_pretrained(hf_model_name_or_path)
+    transformer_model = WhisperForConditionalGeneration.from_pretrained(
+        hf_model_name_or_path
+    )
     config = transformer_model.config
 
     # first build dims
     dims = {
-        'n_mels': config.num_mel_bins,
-        'n_vocab': config.vocab_size,
-        'n_audio_ctx': config.max_source_positions,
-        'n_audio_state': config.d_model,
-        'n_audio_head': config.encoder_attention_heads,
-        'n_audio_layer': config.encoder_layers,
-        'n_text_ctx': config.max_target_positions,
-        'n_text_state': config.d_model,
-        'n_text_head': config.decoder_attention_heads,
-        'n_text_layer': config.decoder_layers
+        "n_mels": config.num_mel_bins,
+        "n_vocab": config.vocab_size,
+        "n_audio_ctx": config.max_source_positions,
+        "n_audio_state": config.d_model,
+        "n_audio_head": config.encoder_attention_heads,
+        "n_audio_layer": config.encoder_layers,
+        "n_text_ctx": config.max_target_positions,
+        "n_text_state": config.d_model,
+        "n_text_head": config.decoder_attention_heads,
+        "n_text_layer": config.decoder_layers,
     }
 
     state_dict = deepcopy(transformer_model.model.state_dict())
@@ -75,17 +81,48 @@ def convert_hf_whisper(hf_model_name_or_path: str, whisper_state_path: str):
 
     torch.save({"dims": dims, "model_state_dict": state_dict}, whisper_state_path)
 
+
 # Ported from models/convert-whisper-to-coreml.py
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-name", type=str, help="name of model to convert (e.g. tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large, large-v1)", required=True)
-    parser.add_argument("--model-path", type=str, help="path to the model (e.g. if published on HuggingFace: Oblivion208/whisper-tiny-cantonese)", required=True)
-    parser.add_argument("--encoder-only", type=bool, help="only convert encoder", default=False)
-    parser.add_argument("--quantize",     type=bool, help="quantize weights to F16", default=False)
-    parser.add_argument("--optimize-ane", type=bool, help="optimize for ANE execution (currently broken)", default=False)
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        help="name of model to convert (e.g. tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large, large-v1)",
+        required=True,
+    )
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        help="path to the model (e.g. if published on HuggingFace: Oblivion208/whisper-tiny-cantonese)",
+        required=True,
+    )
+    parser.add_argument(
+        "--encoder-only", type=bool, help="only convert encoder", default=False
+    )
+    parser.add_argument(
+        "--quantize", type=bool, help="quantize weights to F16", default=False
+    )
+    parser.add_argument(
+        "--optimize-ane",
+        type=bool,
+        help="optimize for ANE execution (currently broken)",
+        default=False,
+    )
     args = parser.parse_args()
 
-    if args.model_name not in ["tiny", "tiny.en", "base", "base.en", "small", "small.en", "medium", "medium.en", "large", "large-v1"]:
+    if args.model_name not in [
+        "tiny",
+        "tiny.en",
+        "base",
+        "base.en",
+        "small",
+        "small.en",
+        "medium",
+        "medium.en",
+        "large",
+        "large-v1",
+    ]:
         raise ValueError("Invalid model name")
 
     pt_target_path = f"models/hf-{args.model_name}.pt"
@@ -106,12 +143,16 @@ if __name__ == "__main__":
         decoder = whisper.decoder
 
     # Convert encoder
-    encoder = whisper_to_coreml.convert_encoder(hparams, encoder, quantize=args.quantize)
+    encoder = whisper_to_coreml.convert_encoder(
+        hparams, encoder, quantize=args.quantize
+    )
     encoder.save(f"models/coreml-encoder-{args.model_name}.mlpackage")
 
     if args.encoder_only is False:
         # Convert decoder
-        decoder = whisper_to_coreml.convert_decoder(hparams, decoder, quantize=args.quantize)
+        decoder = whisper_to_coreml.convert_decoder(
+            hparams, decoder, quantize=args.quantize
+        )
         decoder.save(f"models/coreml-decoder-{args.model_name}.mlpackage")
 
     print("done converting")

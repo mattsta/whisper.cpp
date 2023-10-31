@@ -5,15 +5,15 @@
 
 #include <atomic>
 #include <cstdint>
-#include <vector>
 #include <mutex>
+#include <vector>
 
 //
 // SDL Audio capture
 //
 
 class audio_async {
-public:
+  public:
     audio_async(int len_ms);
     ~audio_async();
 
@@ -26,24 +26,24 @@ public:
     bool clear();
 
     // callback to be called by SDL
-    void callback(uint8_t * stream, int len);
+    void callback(uint8_t *stream, int len);
 
     // get audio data from the circular buffer
-    void get(int ms, std::vector<float> & audio);
+    void get(int ms, std::vector<float> &audio);
 
-private:
+  private:
     SDL_AudioDeviceID m_dev_id_in = 0;
 
     int m_len_ms = 0;
     int m_sample_rate = 0;
 
     std::atomic_bool m_running;
-    std::mutex       m_mutex;
+    std::mutex m_mutex;
 
     std::vector<float> m_audio;
     std::vector<float> m_audio_new;
-    size_t             m_audio_pos = 0;
-    size_t             m_audio_len = 0;
+    size_t m_audio_pos = 0;
+    size_t m_audio_len = 0;
 };
 
 // Return false if need to quit

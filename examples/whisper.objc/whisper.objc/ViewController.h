@@ -16,29 +16,27 @@
 
 struct whisper_context;
 
-typedef struct
-{
+typedef struct {
     int ggwaveId;
     bool isCapturing;
     bool isTranscribing;
     bool isRealtime;
-    UILabel * labelReceived;
+    UILabel *labelReceived;
 
     AudioQueueRef queue;
     AudioStreamBasicDescription dataFormat;
     AudioQueueBufferRef buffers[NUM_BUFFERS];
 
     int n_samples;
-    int16_t * audioBufferI16;
-    float   * audioBufferF32;
+    int16_t *audioBufferI16;
+    float *audioBufferF32;
 
-    struct whisper_context * ctx;
+    struct whisper_context *ctx;
 
-    void * vc;
+    void *vc;
 } StateInp;
 
-@interface ViewController : UIViewController
-{
+@interface ViewController : UIViewController {
     StateInp stateInp;
 }
 
